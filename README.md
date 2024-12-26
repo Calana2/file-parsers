@@ -1,3 +1,3 @@
-## Multimedia utility suite (For learning purposes)
+## Multimedia utility suite
 
 `wav - WAV metadata viewer`
