@@ -27,7 +27,7 @@ func main() {
    case "png":
     img,err = png.Decode(file)
     if err != nil { panic(err) }
-   case "jpg,jpeg":
+   case "jpg","jpeg":
     img,err = jpeg.Decode(file)
     if err != nil { panic(err) }
    default:
@@ -47,6 +47,7 @@ func main() {
 	}
 
 	outFile, err := os.Create("bw_" + filename)
+  fmt.Println("bw_"+filename+" created.")
 	if err != nil {
 		panic(err)
 	}
