@@ -3,8 +3,8 @@ package jpg
 import "fmt"
 
 func showSegment(s Segment) {
-	fmt.Printf(" %-31s: \033[1;31m%s\033[1;0m\n",
-		"Segment", "Unknown")
+	fmt.Printf(" %-31s: \033[1;31m%s (0x%X)\033[1;0m\n",
+		"Segment", "Unknown",s.Marker)
 	fmt.Printf("  %-30s: %d Bytes\n",
 		"Length", s.Length)
 }
@@ -64,6 +64,29 @@ func showEXIF(s EXIFSegment) {
 	}
 	fmt.Printf("  %-30s: %s [%s]\n",
 		"Endianness", s.TIFFHeader.Alignment, endianness)
+	for idx, IFD := range s.IFDs {
+		fmt.Printf("  %-30s: %d (%s)\n",
+			"Image File Directory", idx, IFDType[idx])
+		fmt.Printf("  %-30s: %d \n",
+			"Number of Entries", IFD.EntriesNum)
+		for _, entry := range IFD.Entries {
+			fmt.Printf("   %-29s: ",findEXIFTag(entry.Tag).Name)
+      for _,component := range entry.Data {
+        fmt.Printf("%v ",component)
+      }
+      fmt.Printf("\n")
+		}
+	}
+}
+
+func showICC(s ICCSegment) {
+	num := s.Marker[1] - 0xe0
+	fmt.Printf(" \033[1;34m%-31s: %s %d\033[1;0m\n",
+		"Segment", "Application", num)
+	fmt.Printf("  %-30s: %d Bytes\n",
+		"Length", s.Length)
+	fmt.Printf("  %-30s: %s\n",
+		"Identifier", s.Identifier)
 }
 
 func showCOM(s COMSegment) {

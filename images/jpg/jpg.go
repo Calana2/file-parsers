@@ -21,6 +21,8 @@ func (jpg *JPG) ShowMetadata() {
 			showAPP(s)
 		case EXIFSegment:
 			showEXIF(s)
+    case ICCSegment:
+      showICC(s)
 		case COMSegment:
 			showCOM(s)
 		case DQTSegment:

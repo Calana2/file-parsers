@@ -29,24 +29,19 @@ type WAV struct {
 	BytePerBlock  uint16
 	BitsPerSample uint16
 	// LIST
-	LISTBlockID   string
-	LISTBlockSize uint32
-	LISTBlockType string
-	// IART
-	IARTBlockID    string
-	IARTDataSize   uint32
-	IARTArtistName string
-	// INAM
-	INAMBlockID  string
-	INAMDataSize uint32
-	INAMSongName string
-	// ISFT
-	ISFTBlockID  string
-	ISFTDataSize uint32
-	ISFTSoftware string
+	LISTBlockID    string
+	LISTBlockSize  uint32
+	LISTBlockType  string
+	ListInfoChunks []InfoChunk
 	// data
 	DataBlockID string
 	DataSize    uint32
+}
+
+type InfoChunk struct {
+	BlockID  string
+	DataSize uint32
+	Data     string
 }
 
 // Create a new WAV file.
@@ -55,14 +50,14 @@ func New(filepath string) (*WAV, error) {
 	if err != nil {
 		return nil, err
 	}
-  fileinfo, err := file.Stat()
+	fileinfo, err := file.Stat()
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 	wav := &WAV{}
 	wav.Name = file.Name()
-  headers := make([]byte,fileinfo.Size()/4)
+	headers := make([]byte, fileinfo.Size()/4)
 	if _, err := file.Read(headers); err != nil {
 		return nil, err
 	}
@@ -70,6 +65,10 @@ func New(filepath string) (*WAV, error) {
 	wav.FileTypeBlockID = string(headers[0:4])
 	wav.FileSize = binary.LittleEndian.Uint32(headers[4:8]) + 0x8
 	wav.FileFormatID = string(headers[8:12])
+	fmt.Println(wav.FileTypeBlockID)
+	if wav.FileTypeBlockID == "ID3\x04" {
+		return nil, fmt.Errorf("ID3 format not supported(yet).")
+	}
 	// fmt
 	wav.FormatBlockID = string(headers[12:16])
 	wav.BlockSize = binary.LittleEndian.Uint32(headers[16:20])
@@ -83,38 +82,31 @@ func New(filepath string) (*WAV, error) {
 	offset := 36
 	chunk := string(headers[offset : offset+4])
 	for chunk != "data" {
+		fmt.Println(chunk)
 		switch chunk {
-		// strange error, maybe because of some padding to memory alignment ?
-		case "\x00dat", "\x00\x00da", "\x00\x00\x00d":
-			offset++
 		case "LIST":
 			wav.LISTBlockID = string(headers[offset : offset+4])
 			wav.LISTBlockSize = binary.LittleEndian.Uint32(headers[offset+4 : offset+8])
 			wav.LISTBlockType = string(headers[offset+8 : offset+12])
 			offset += 12
-		case "IART":
-			wav.IARTBlockID = string(headers[offset : offset+4])
-			wav.IARTDataSize = binary.LittleEndian.Uint32(headers[offset+4 : offset+8])
-			wav.IARTArtistName = string(headers[offset+8 : offset+8+int(wav.IARTDataSize)])
-			offset += 8 + int(wav.IARTDataSize)
-		case "INAM":
-			wav.INAMBlockID = string(headers[offset : offset+4])
-			wav.INAMDataSize = binary.LittleEndian.Uint32(headers[offset+4 : offset+8])
-			wav.INAMSongName = string(headers[offset+8 : offset+8+int(wav.INAMDataSize)])
-			offset += 8 + int(wav.INAMDataSize)
-		case "ISFT":
-			wav.ISFTBlockID = string(headers[offset : offset+4])
-			wav.ISFTDataSize = binary.LittleEndian.Uint32(headers[offset+4 : offset+8])
-			wav.ISFTSoftware = string(headers[offset+8 : offset+8+int(wav.ISFTDataSize)])
-			offset += 8 + int(wav.ISFTDataSize)
-		case "IARL", "ICMS", "ICMT", "ICOP", "ICRD",
+			/*
+				wav.ISFTBlockID = string(headers[offset : offset+4])
+				wav.ISFTDataSize = binary.LittleEndian.Uint32(headers[offset+4 : offset+8])
+				wav.ISFTSoftware = string(headers[offset+8 : offset+8+int(wav.ISFTDataSize)])
+				offset += 9 + int(wav.ISFTDataSize) */
+		case "IART", "INAM", "ISFT",
+			"IARL", "ICMS", "ICMT", "ICOP", "ICRD",
 			"ICRP", "IDIM", "IDPI", "IENG", "IGNR",
 			"IKEY", "ILGT", "IMED", "IPLT", "IPRD",
 			"ISBJ", "ISRC", "ISRF", "ITCH":
-			// Not yet
-			offset += 8 + int(binary.LittleEndian.Uint32(headers[offset+4:offset+8]))
+			var ic InfoChunk
+			ic.BlockID = string(headers[offset : offset+4])
+			ic.DataSize = binary.LittleEndian.Uint32(headers[offset+4 : offset+8])
+			ic.Data = string(headers[offset+8 : offset+8+int(ic.DataSize)])
+			offset += 9 + int(ic.DataSize)
+			wav.ListInfoChunks = append(wav.ListInfoChunks, ic)
 		default:
-			return nil, fmt.Errorf("Unknown chunk ID")
+			return nil, fmt.Errorf("Unknown chunk ID %s", chunk)
 		}
 		chunk = string(headers[offset : offset+4])
 	}
@@ -182,38 +174,20 @@ func (w *WAV) PrintMetadata() {
 			"LIST Block ID", w.LISTBlockID)
 		fmt.Printf("%-50s: %d Bytes\n",
 			"LIST Block Size", w.LISTBlockSize)
-	}
-	// INFO
-	if w.LISTBlockType != "" {
-		fmt.Printf("%-50s: %s\n",
-			"Type of LIST Block", w.LISTBlockType)
-	}
-	// IART
-	if w.IARTBlockID != "" {
-		fmt.Printf("%-50s: %s\n",
-			"IART Block ID", w.IARTBlockID)
-		fmt.Printf("%-50s: %d Bytes\n",
-			"IART Data Size", w.IARTDataSize)
-		fmt.Printf("%-50s: %s\n",
-			"IART Artist Name", w.IARTArtistName)
-	}
-	// INAM
-	if w.INAMBlockID != "" {
-		fmt.Printf("%-50s: %s\n",
-			"INAM Block ID", w.INAMBlockID)
-		fmt.Printf("%-50s: %d Bytes\n",
-			"INAM Data Size", w.INAMDataSize)
-		fmt.Printf("%-50s: %s\n",
-			"INAM Song Name", w.INAMSongName)
-	}
-	// ISFT
-	if w.ISFTBlockID != "" {
-		fmt.Printf("%-50s: %s\n",
-			"ISFT Block ID", w.ISFTBlockID)
-		fmt.Printf("%-50s: %d Bytes\n",
-			"ISFT Data Size", w.ISFTDataSize)
-		fmt.Printf("%-50s: %s\n",
-			"ISFT Software", w.ISFTSoftware)
+		if w.LISTBlockType != "" {
+			fmt.Printf("%-50s: %s\n",
+				"Type of LIST Block", w.LISTBlockType)
+		}
+    if w.LISTBlockType == "INFO" {
+     for _,ic := range w.ListInfoChunks {
+			fmt.Printf(" %-49s: %s\n",
+       "Chunk",ic.BlockID)
+			fmt.Printf(" %-49s: %d\n",
+       "Data Size",ic.DataSize)
+			fmt.Printf(" %-49s: %s\n",
+       "Data",ic.Data)
+     }
+    }
 	}
 	// data
 	fmt.Printf("%-50s: %s\n",
@@ -264,7 +238,7 @@ func (w *WAV) PlayAudio() error {
 			fmt.Scanln()
 			speaker.Lock()
 			ctrl.Paused = !ctrl.Paused
-      fmt.Printf("\033[F\r")
+			fmt.Printf("\033[F\r")
 			speaker.Unlock()
 		}
 	}()
@@ -316,3 +290,5 @@ func (w *WAV) PlayAudio() error {
 	fmt.Println("\033[?25h")
 	return nil
 }
+
+

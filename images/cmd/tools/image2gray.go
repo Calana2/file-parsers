@@ -41,7 +41,7 @@ func main() {
 		for x := bounds.Min.X; x < bounds.Max.X; x++ {
 			c := img.At(x, y)
 			r, g, b, _ := c.RGBA()
-			gray := uint8((r + g + b) / 3 >> 8)
+			gray := uint8(int(0.299*float32(r) + 0.587*float32(g) + 0.114*float32(b)) % 256)
 			bwImg.Set(x, y, color.Gray{Y: gray})
 		}
 	}
