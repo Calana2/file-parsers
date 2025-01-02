@@ -51,6 +51,7 @@ func parseEXIF(data []byte, size int) EXIFSegment {
 	}
 	// Parse IFDs
 	offset := AlignmentOffset + int(s.TIFFHeader.IFDOffset)
+  var subIFDOffset int
   for {
     fmt.Println("IFD")
 		var ifd IFD
@@ -68,7 +69,7 @@ func parseEXIF(data []byte, size int) EXIFSegment {
         dataAddress:= AlignmentOffset + int(entry.Data_Offset)
 				for i := 0; i < int(entry.ComponentsNum); i++ {
 					entry.Data = append(entry.Data,EntryDataOf(
-           data[dataAddress:dataAddress+int(df.Bytes_per_component)],df,endianness))
+          data[dataAddress:dataAddress+int(df.Bytes_per_component)],df,endianness))
           dataAddress += int(df.Bytes_per_component)
 				}
 			} else {
@@ -76,20 +77,23 @@ func parseEXIF(data []byte, size int) EXIFSegment {
 					entry.Data = append(entry.Data,EntryDataOf(
           data[offset+i:offset+i+int(df.Bytes_per_component)],df,endianness))
 				}
-			}
-      fmt.Printf("tag:%s format:%s numcomponents:%d offset:0x%X\n",findEXIFTag(entry.Tag).Name,DataFormatIndex[entry.Format].Format,entry.ComponentsNum,entry.Data_Offset)
-      fmt.Printf("DATA: ")
-      for _,d := range entry.Data {
-        fmt.Printf("%v ",d)
-      } 
-      fmt.Println()
+			}  
+      if entry.Tag == 0x8769 {
+       subIFDOffset = int(entry.Data[0].(uint32))
+        fmt.Println(subIFDOffset)
+      }
       offset+=4
 			ifd.Entries = append(ifd.Entries, entry)
 		}
 		ifd.OffsetNextIFD = utils.ExtractUint32(data[offset:offset+4], endianness)
 		s.IFDs = append(s.IFDs, ifd)
 		if ifd.OffsetNextIFD == 0 {
-			break
+      if subIFDOffset != 0 {
+			 offset = AlignmentOffset + int(subIFDOffset)
+       subIFDOffset = 0
+       continue
+      }  
+      break
 		}
     offset = AlignmentOffset + int(ifd.OffsetNextIFD)
 	}

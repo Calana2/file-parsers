@@ -70,7 +70,14 @@ func showEXIF(s EXIFSegment) {
 		fmt.Printf("  %-30s: %d \n",
 			"Number of Entries", IFD.EntriesNum)
 		for _, entry := range IFD.Entries {
-			fmt.Printf("   %-29s: ",findEXIFTag(entry.Tag).Name)
+      switch idx {
+       case 0:
+			  fmt.Printf("   %-29s: ",findIFD0Tag(entry.Tag).Name) 
+       case 1:
+			  fmt.Printf("   %-29s: ",findIFD1Tag(entry.Tag).Name) 
+       case 2:
+			  fmt.Printf("   %-29s: ",findSubIFDTag(entry.Tag).Name) 
+      }
       for _,component := range entry.Data {
         fmt.Printf("%v ",component)
       }

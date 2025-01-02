@@ -27,7 +27,7 @@ type DataFormat struct {
 }
 
 var DataFormatIndex = []DataFormat {
- DataFormat{Format: "unknown", Bytes_per_component: 0}, // ?
+ DataFormat{Format: "unknown", Bytes_per_component: 0}, // Nope
  DataFormat{Format: "unsigned byte", Bytes_per_component: 1},
  DataFormat{Format: "ascii strings", Bytes_per_component: 1},
  DataFormat{Format: "unsigned short", Bytes_per_component: 2},
