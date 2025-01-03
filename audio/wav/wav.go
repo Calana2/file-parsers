@@ -65,7 +65,6 @@ func New(filepath string) (*WAV, error) {
 	wav.FileTypeBlockID = string(headers[0:4])
 	wav.FileSize = binary.LittleEndian.Uint32(headers[4:8]) + 0x8
 	wav.FileFormatID = string(headers[8:12])
-	fmt.Println(wav.FileTypeBlockID)
 	if wav.FileTypeBlockID == "ID3\x04" {
 		return nil, fmt.Errorf("ID3 format not supported(yet).")
 	}
@@ -82,7 +81,6 @@ func New(filepath string) (*WAV, error) {
 	offset := 36
 	chunk := string(headers[offset : offset+4])
 	for chunk != "data" {
-		fmt.Println(chunk)
 		switch chunk {
 		case "LIST":
 			wav.LISTBlockID = string(headers[offset : offset+4])

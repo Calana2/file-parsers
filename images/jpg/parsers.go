@@ -80,7 +80,6 @@ func parseEXIF(data []byte, size int) EXIFSegment {
 			}  
       if entry.Tag == 0x8769 {
        subIFDOffset = int(entry.Data[0].(uint32))
-        fmt.Println(subIFDOffset)
       }
       offset+=4
 			ifd.Entries = append(ifd.Entries, entry)

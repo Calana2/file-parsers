@@ -1,10 +1,12 @@
 package jpg
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func showSegment(s Segment) {
 	fmt.Printf(" %-31s: \033[1;31m%s (0x%X)\033[1;0m\n",
-		"Segment", "Unknown",s.Marker)
+		"Segment", "Unknown", s.Marker)
 	fmt.Printf("  %-30s: %d Bytes\n",
 		"Length", s.Length)
 }
@@ -65,23 +67,129 @@ func showEXIF(s EXIFSegment) {
 	fmt.Printf("  %-30s: %s [%s]\n",
 		"Endianness", s.TIFFHeader.Alignment, endianness)
 	for idx, IFD := range s.IFDs {
-		fmt.Printf("  %-30s: %d (%s)\n",
+		fmt.Printf("  \033[0;33m%-30s: %d (%s)\033[1;0m\n",
 			"Image File Directory", idx, IFDType[idx])
 		fmt.Printf("  %-30s: %d \n",
 			"Number of Entries", IFD.EntriesNum)
 		for _, entry := range IFD.Entries {
-      switch idx {
-       case 0:
-			  fmt.Printf("   %-29s: ",findIFD0Tag(entry.Tag).Name) 
-       case 1:
-			  fmt.Printf("   %-29s: ",findIFD1Tag(entry.Tag).Name) 
-       case 2:
-			  fmt.Printf("   %-29s: ",findSubIFDTag(entry.Tag).Name) 
-      }
-      for _,component := range entry.Data {
-        fmt.Printf("%v ",component)
-      }
-      fmt.Printf("\n")
+			var tagname string
+			switch idx {
+			case 0:
+				tagname = findIFD0Tag(entry.Tag).Name
+			case 1:
+				tagname = findIFD1Tag(entry.Tag).Name
+			case 2:
+				tagname = findSubIFDTag(entry.Tag).Name
+			}
+			if tagname == "" {
+				fmt.Printf("   %-29s 0x%X %s: ", 
+         "Unparsed Tag",entry.Tag, DataFormatIndex[entry.Format].Format)
+			} else {
+				fmt.Printf("   %-29s: ", tagname)
+			}
+			for idx, component := range entry.Data {
+				switch DataFormatIndex[entry.Format].Format {
+				case "unsigned byte":
+					fmt.Printf("%v", component.(uint8))
+				case "ascii strings":
+					fmt.Printf("%s", component.(string))
+				case "unsigned short":
+					switch tagname {
+					// IFD0
+					case "Orientation":
+            fmt.Print(Orientation[component.(uint16)])
+					case "ResolutionUnit":
+						if idx == 0 {
+             fmt.Print(ResolutionUnit_1[component.(uint16)])
+						} else if idx == 1 {
+             fmt.Print(ResolutionUnit_2[component.(uint16)])
+						}
+					case "YCbCrPositioning":
+             fmt.Print(YCbCrPositioning[component.(uint16)])
+						// IFD1
+					case "Compression":
+             fmt.Print(Compression[component.(uint16)])
+					case "PhotometricInterpretation":
+             fmt.Print(PhotometricInterpretation[component.(uint16)])
+					case "PlanarConfiguration":
+             fmt.Print(PlanarConfiguration[component.(uint16)])
+						// SubIFD
+					case "ExposureProgram":
+             fmt.Print(ExposureProgram[component.(uint16)])
+          case "MeteringMode":
+             fmt.Print(MeteringMode[component.(uint16)])
+          case "LightSource":
+             fmt.Print(LightSource[component.(uint16)])
+          case "Flash":
+             fmt.Print(Flash[component.(uint16)])
+          case "ColorSpace":
+             fmt.Print(ColorSpace[component.(uint16)])
+          case "FocalPlaneResolu  tionUnit":
+             fmt.Print(FocalPlaneResolutionUnit[component.(uint16)])
+          case "SensingMethod":
+             fmt.Print(SensingMethod[component.(uint16)])
+          case "CustomRendered":
+             fmt.Print(CustomRendered[component.(uint16)])
+          case "ExposureMode":
+             fmt.Print(ExposureMode[component.(uint16)])
+          case "WhiteBalance":
+             fmt.Print(WhiteBalance[component.(uint16)])
+          case "SceneCaptureType":
+             fmt.Print(SceneCaptureType[component.(uint16)])
+          case "GainControl":
+             fmt.Print(GainControl[component.(uint16)])
+          case "Contrast":
+             fmt.Print(Contrast[component.(uint16)])
+          case "Saturation":
+             fmt.Print(Saturation[component.(uint16)])
+          case "Sharpness":
+             fmt.Print(Sharpness[component.(uint16)])
+					default:
+						fmt.Printf("%d", component.(uint16))
+					}
+				case "unsigned long":
+					fmt.Printf("%d", component.(uint32))
+				case "unsigned rational":
+					value := component.(UnsignedRational)
+					fmt.Printf("%s", value.Representation())
+				case "signed byte":
+					fmt.Printf("%v", component.(int8))
+				case "undefined":
+					switch tagname {
+          // SubIFD
+					case "ExifVersion","UserComment","FlashPixVersion":
+             fmt.Print(string(component.([]uint8)))
+          case "ComponentConfiguration":
+             value := component.([]uint8)[0]
+             fmt.Print(ComponentConfiguration[int(value)])
+          case "FileSource":
+             value := component.([]uint8)[0]
+             fmt.Print(ComponentConfiguration[int(value)])
+           case "SceneType":
+             value := component.([]uint8)[0]
+             fmt.Print(ComponentConfiguration[int(value)])
+           case "CustomRendered":
+             value := component.([]uint8)[0]
+             fmt.Print(ComponentConfiguration[int(value)])
+					default:
+						fmt.Printf("%v", component)
+					}
+				case "signed short":
+					fmt.Printf("%d", component.(int16))
+				case "signed long":
+					fmt.Printf("%d", component.(int32))
+				case "signed rational":
+					value := component.(SignedRational)
+					fmt.Printf("%s", value.Representation())
+				case "signed float":
+					fmt.Printf("%d", component.(float32))
+				case "double float":
+					fmt.Printf("%d", component.(float64))
+				default:
+					fmt.Printf("%v", component)
+				}
+			}
+			fmt.Printf("\n")
 		}
 	}
 }
@@ -138,6 +246,22 @@ func showSOF(s SOFSegment, codingAlg string) {
 			horizontalSamplingFactor, verticalSamplingFactor)
 		fmt.Printf("  %-30s: %d\n",
 			"Quantization Table Index", v.Quantization)
+	}
+	if len(s.SOFComponents) == 3 {
+		// 4:4:4
+		if (s.SOFComponents[0].Sampling_X__Y == s.SOFComponents[1].Sampling_X__Y) &&
+			(s.SOFComponents[1].Sampling_X__Y == s.SOFComponents[2].Sampling_X__Y) {
+			fmt.Printf("  %-30s: %s\n", "Y Cb Cr Sub Sampling", "YCbCr4:4:4 (1 1)")
+			// 4:2:2
+		} else if (s.SOFComponents[1].Sampling_X__Y == s.SOFComponents[2].Sampling_X__Y) &&
+			((s.SOFComponents[1].Sampling_X__Y>>4)&0xf == 1) &&
+			((s.SOFComponents[0].Sampling_X__Y>>4)&0xf == 2) {
+			if s.SOFComponents[1].Sampling_X__Y&0xf == 1 {
+				fmt.Printf("  %-30s: %s\n", "Y Cb Cr Sub Sampling", "YCbCr4:2:0 (2 2)")
+			} else {
+				fmt.Printf("  %-30s: %s\n", "Y Cb Cr Sub Sampling", "YCbCr4:2:2 (2 2)")
+			}
+		}
 	}
 }
 
