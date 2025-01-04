@@ -2,7 +2,6 @@ package jpg
 
 import (
 	"encoding/binary"
-	"fmt"
 	"main/utils"
 )
 
@@ -39,21 +38,22 @@ func parseEXIF(data []byte, size int) EXIFSegment {
 	s.Identifier = string(data[4:10])
 	s.TIFFHeader.Alignment = string(data[10:12])
 	s.TIFFHeader.FixedBytes = [2]byte{data[12], data[13]}
-  // All offsets from here are respect to the alignment
-  var AlignmentOffset = 10
+	// All offsets from here are respect to the alignment
+	var AlignmentOffset = 10
 	var endianness binary.ByteOrder
 	if s.TIFFHeader.Alignment == "II" {
 		endianness = binary.LittleEndian
-	  s.TIFFHeader.IFDOffset = binary.LittleEndian.Uint32(data[14:18])
+		s.TIFFHeader.IFDOffset = binary.LittleEndian.Uint32(data[14:18])
 	} else {
 		endianness = binary.BigEndian
-	  s.TIFFHeader.IFDOffset = binary.BigEndian.Uint32(data[14:18])
+		s.TIFFHeader.IFDOffset = binary.BigEndian.Uint32(data[14:18])
 	}
 	// Parse IFDs
 	offset := AlignmentOffset + int(s.TIFFHeader.IFDOffset)
-  var subIFDOffset int
-  for {
-    fmt.Println("IFD")
+	var subIFDOffset int
+	var GPSIFDOffset int
+	var extraIFDScanned = [2]bool{false}
+	for {
 		var ifd IFD
 		ifd.EntriesNum = utils.ExtractUint16(data[offset:offset+2], endianness)
 		offset += 2
@@ -66,35 +66,42 @@ func parseEXIF(data []byte, size int) EXIFSegment {
 			df := DataFormatIndex[entry.Format]
 			if int(entry.ComponentsNum)*int(df.Bytes_per_component) > 4 {
 				entry.Data_Offset = utils.ExtractUint32(data[offset:offset+4], endianness)
-        dataAddress:= AlignmentOffset + int(entry.Data_Offset)
+				dataAddress := AlignmentOffset + int(entry.Data_Offset)
 				for i := 0; i < int(entry.ComponentsNum); i++ {
-					entry.Data = append(entry.Data,EntryDataOf(
-          data[dataAddress:dataAddress+int(df.Bytes_per_component)],df,endianness))
-          dataAddress += int(df.Bytes_per_component)
+					entry.Data = append(entry.Data, EntryDataOf(
+						data[dataAddress:dataAddress+int(df.Bytes_per_component)], df, endianness))
+					dataAddress += int(df.Bytes_per_component)
 				}
 			} else {
 				for i := 0; i < int(entry.ComponentsNum); i++ {
-					entry.Data = append(entry.Data,EntryDataOf(
-          data[offset+i:offset+i+int(df.Bytes_per_component)],df,endianness))
+					entry.Data = append(entry.Data, EntryDataOf(
+						data[offset+i:offset+i+int(df.Bytes_per_component)], df, endianness))
 				}
-			}  
-      if entry.Tag == 0x8769 {
-       subIFDOffset = int(entry.Data[0].(uint32))
-      }
-      offset+=4
+			}
+			if entry.Tag == 0x8769 {
+				subIFDOffset = int(entry.Data[0].(uint32))
+			}
+			if entry.Tag == 0x8825 {
+				GPSIFDOffset = int(entry.Data[0].(uint32))
+			}
+			offset += 4
 			ifd.Entries = append(ifd.Entries, entry)
 		}
 		ifd.OffsetNextIFD = utils.ExtractUint32(data[offset:offset+4], endianness)
 		s.IFDs = append(s.IFDs, ifd)
 		if ifd.OffsetNextIFD == 0 {
-      if subIFDOffset != 0 {
-			 offset = AlignmentOffset + int(subIFDOffset)
-       subIFDOffset = 0
-       continue
-      }  
-      break
+			if subIFDOffset != 0 && !extraIFDScanned[0] {
+				offset = AlignmentOffset + subIFDOffset
+				extraIFDScanned[0] = true
+				continue
+			} else if GPSIFDOffset != 0 && !extraIFDScanned[1] {
+				offset = AlignmentOffset + GPSIFDOffset
+				extraIFDScanned[1] = true
+				continue
+			}
+			break
 		}
-    offset = AlignmentOffset + int(ifd.OffsetNextIFD)
+		offset = AlignmentOffset + int(ifd.OffsetNextIFD)
 	}
 	return s
 }

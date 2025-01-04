@@ -71,6 +71,10 @@ func showEXIF(s EXIFSegment) {
 			"Image File Directory", idx, IFDType[idx])
 		fmt.Printf("  %-30s: %d \n",
 			"Number of Entries", IFD.EntriesNum)
+    // for GPS
+		var hasLat bool
+		var hasLon bool
+		var gps GPSData
 		for _, entry := range IFD.Entries {
 			var tagname string
 			switch idx {
@@ -80,10 +84,12 @@ func showEXIF(s EXIFSegment) {
 				tagname = findIFD1Tag(entry.Tag).Name
 			case 2:
 				tagname = findSubIFDTag(entry.Tag).Name
+			case 3:
+				tagname = findGPSIFDTag(entry.Tag).Name
 			}
 			if tagname == "" {
-				fmt.Printf("   %-29s 0x%X %s: ", 
-         "Unparsed Tag",entry.Tag, DataFormatIndex[entry.Format].Format)
+				fmt.Printf("   %-29s 0x%X %s: ",
+					"Unparsed Tag", entry.Tag, DataFormatIndex[entry.Format].Format)
 			} else {
 				fmt.Printf("   %-29s: ", tagname)
 			}
@@ -92,58 +98,64 @@ func showEXIF(s EXIFSegment) {
 				case "unsigned byte":
 					fmt.Printf("%v", component.(uint8))
 				case "ascii strings":
+					switch tagname {
+					case "GPSLongitudeRef":
+						gps.LongitudeRef += component.(string)
+					case "GPSLatitudeRef":
+						gps.LatitudeRef += component.(string)
+					}
 					fmt.Printf("%s", component.(string))
 				case "unsigned short":
 					switch tagname {
 					// IFD0
 					case "Orientation":
-            fmt.Print(Orientation[component.(uint16)])
+						fmt.Print(Orientation[component.(uint16)])
 					case "ResolutionUnit":
 						if idx == 0 {
-             fmt.Print(ResolutionUnit_1[component.(uint16)])
+							fmt.Print(ResolutionUnit_1[component.(uint16)])
 						} else if idx == 1 {
-             fmt.Print(ResolutionUnit_2[component.(uint16)])
+							fmt.Print(ResolutionUnit_2[component.(uint16)])
 						}
 					case "YCbCrPositioning":
-             fmt.Print(YCbCrPositioning[component.(uint16)])
+						fmt.Print(YCbCrPositioning[component.(uint16)])
 						// IFD1
 					case "Compression":
-             fmt.Print(Compression[component.(uint16)])
+						fmt.Print(Compression[component.(uint16)])
 					case "PhotometricInterpretation":
-             fmt.Print(PhotometricInterpretation[component.(uint16)])
+						fmt.Print(PhotometricInterpretation[component.(uint16)])
 					case "PlanarConfiguration":
-             fmt.Print(PlanarConfiguration[component.(uint16)])
+						fmt.Print(PlanarConfiguration[component.(uint16)])
 						// SubIFD
 					case "ExposureProgram":
-             fmt.Print(ExposureProgram[component.(uint16)])
-          case "MeteringMode":
-             fmt.Print(MeteringMode[component.(uint16)])
-          case "LightSource":
-             fmt.Print(LightSource[component.(uint16)])
-          case "Flash":
-             fmt.Print(Flash[component.(uint16)])
-          case "ColorSpace":
-             fmt.Print(ColorSpace[component.(uint16)])
-          case "FocalPlaneResolu  tionUnit":
-             fmt.Print(FocalPlaneResolutionUnit[component.(uint16)])
-          case "SensingMethod":
-             fmt.Print(SensingMethod[component.(uint16)])
-          case "CustomRendered":
-             fmt.Print(CustomRendered[component.(uint16)])
-          case "ExposureMode":
-             fmt.Print(ExposureMode[component.(uint16)])
-          case "WhiteBalance":
-             fmt.Print(WhiteBalance[component.(uint16)])
-          case "SceneCaptureType":
-             fmt.Print(SceneCaptureType[component.(uint16)])
-          case "GainControl":
-             fmt.Print(GainControl[component.(uint16)])
-          case "Contrast":
-             fmt.Print(Contrast[component.(uint16)])
-          case "Saturation":
-             fmt.Print(Saturation[component.(uint16)])
-          case "Sharpness":
-             fmt.Print(Sharpness[component.(uint16)])
+						fmt.Print(ExposureProgram[component.(uint16)])
+					case "MeteringMode":
+						fmt.Print(MeteringMode[component.(uint16)])
+					case "LightSource":
+						fmt.Print(LightSource[component.(uint16)])
+					case "Flash":
+						fmt.Print(Flash[component.(uint16)])
+					case "ColorSpace":
+						fmt.Print(ColorSpace[component.(uint16)])
+					case "FocalPlaneResolu  tionUnit":
+						fmt.Print(FocalPlaneResolutionUnit[component.(uint16)])
+					case "SensingMethod":
+						fmt.Print(SensingMethod[component.(uint16)])
+					case "CustomRendered":
+						fmt.Print(CustomRendered[component.(uint16)])
+					case "ExposureMode":
+						fmt.Print(ExposureMode[component.(uint16)])
+					case "WhiteBalance":
+						fmt.Print(WhiteBalance[component.(uint16)])
+					case "SceneCaptureType":
+						fmt.Print(SceneCaptureType[component.(uint16)])
+					case "GainControl":
+						fmt.Print(GainControl[component.(uint16)])
+					case "Contrast":
+						fmt.Print(Contrast[component.(uint16)])
+					case "Saturation":
+						fmt.Print(Saturation[component.(uint16)])
+					case "Sharpness":
+						fmt.Print(Sharpness[component.(uint16)])
 					default:
 						fmt.Printf("%d", component.(uint16))
 					}
@@ -151,26 +163,34 @@ func showEXIF(s EXIFSegment) {
 					fmt.Printf("%d", component.(uint32))
 				case "unsigned rational":
 					value := component.(UnsignedRational)
+					switch tagname {
+					case "GPSLongitude":
+						hasLon = true
+						gps.LongitudeValue += value.Representation()
+					case "GPSLatitude":
+						hasLat = true
+						gps.LatitudeValue += value.Representation()
+					}
 					fmt.Printf("%s", value.Representation())
 				case "signed byte":
 					fmt.Printf("%v", component.(int8))
 				case "undefined":
 					switch tagname {
-          // SubIFD
-					case "ExifVersion","UserComment","FlashPixVersion":
-             fmt.Print(string(component.([]uint8)))
-          case "ComponentConfiguration":
-             value := component.([]uint8)[0]
-             fmt.Print(ComponentConfiguration[int(value)])
-          case "FileSource":
-             value := component.([]uint8)[0]
-             fmt.Print(ComponentConfiguration[int(value)])
-           case "SceneType":
-             value := component.([]uint8)[0]
-             fmt.Print(ComponentConfiguration[int(value)])
-           case "CustomRendered":
-             value := component.([]uint8)[0]
-             fmt.Print(ComponentConfiguration[int(value)])
+					// SubIFD
+					case "ExifVersion", "UserComment", "FlashPixVersion":
+						fmt.Print(string(component.([]uint8)))
+					case "ComponentConfiguration":
+						value := component.([]uint8)[0]
+						fmt.Print(ComponentConfiguration[int(value)])
+					case "FileSource":
+						value := component.([]uint8)[0]
+						fmt.Print(ComponentConfiguration[int(value)])
+					case "SceneType":
+						value := component.([]uint8)[0]
+						fmt.Print(ComponentConfiguration[int(value)])
+					case "CustomRendered":
+						value := component.([]uint8)[0]
+						fmt.Print(ComponentConfiguration[int(value)])
 					default:
 						fmt.Printf("%v", component)
 					}
@@ -190,6 +210,11 @@ func showEXIF(s EXIFSegment) {
 				}
 			}
 			fmt.Printf("\n")
+		}
+		if idx == 3 && hasLat && hasLon {
+			fmt.Printf("   %-29s: %s\n",
+       "GPS Position", 
+       parseAndPrintGPS(gps.LatitudeRef,gps.LatitudeValue,gps.LongitudeRef,gps.LongitudeValue))
 		}
 	}
 }

@@ -1,10 +1,10 @@
 ### WAV metadata viewer and player
 
-` go run main_wav.go -d -p file.wav ` 
+` go run wav-parser.go -d -p duvet.wav ` 
 ```
-Name                                              : file.wav
+Name                                              : duvet.wav
 File Type Block ID                                : RIFF (Resource Interchange File Format)
-File Size                                         : 1.00 MB (1048558 Bytes)
+File Size                                         : 1.46 MB (1528134 Bytes)
 File Format ID                                    : WAVE
 Format Block ID                                   : fmt 
 Block Size                                        : 16 Bytes
@@ -14,13 +14,19 @@ Frequence                                         : 44100 Hz
 Bytes per second                                  : 172.27 KB
 Bytes per block                                   : 4 Bytes
 Bits per sample                                   : 16
+LIST Block ID                                     : LIST
+LIST Block Size                                   : 26 Bytes
+Type of LIST Block                                : INFO
+ Chunk                                            : ISFT
+ Data Size                                        : 13
+ Data                                             : Lavf61.7.100
 Data Block ID                                     : data
-Data Size                                         : 1.00 MB (1048376 Bytes)
-Estimated audio duration                          : 5.943175 seconds
+Data Size                                         : 1.46 MB (1528056 Bytes)
+Estimated audio duration                          : 8.662449 seconds
 
-Playing file.wav
+Playing duvet.wav
 ┌────────────────────────────────────────────────────────────────────────────────────────────────────┐
-│█████████████████████████████████                                                                   │
+│███████████████████████████████████████████████████████████████████████████████                     │
 ^C───────────────────────────────────────────────────────────────────────────────────────────────────┘
 interrupt received.
 ```

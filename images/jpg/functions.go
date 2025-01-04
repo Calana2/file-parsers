@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
+	"strings"
 )
 
 func New(filepath string) (*JPG, error) {
@@ -539,6 +541,44 @@ func findSubIFDTag(idx uint16) IFDTag {
   return IFDTags[idx] 
 }
 
+func findGPSIFDTag(idx uint16) IFDTag {
+	IFDTags := map[uint16]IFDTag{ 
+    0x0000: {Name: "GPSVersionID", Description:""},
+    0x0001: {Name: "GPSLatitudeRef", Description:""},
+    0x0002: {Name: "GPSLatitude", Description:""},
+    0x0003: {Name: "GPSLongitudeRef", Description:""},
+    0x0004: {Name: "GPSLongitude", Description:""},
+    0x0005: {Name: "GPSAltitudeRef", Description:""},
+    0x0006: {Name: "GPSAltitude", Description:""},
+    0x0007: {Name: "GPSTimeStamp", Description:""},
+    0x0008: {Name: "GPSSatellites", Description:""},
+    0x0009: {Name: "GPSStatus", Description:""},
+    0x000a: {Name: "GPSMeasureMode", Description:""},
+    0x000b: {Name: "GPSDOP", Description:""},
+    0x000c: {Name: "GPSSpeedRef ", Description:""},
+    0x000d: {Name: "GPSSpeed", Description:""},
+    0x000e: {Name: "GPSTrackRef", Description:""},
+    0x000f: {Name: "GPSTrack", Description:""},
+    0x0010: {Name: "GPSImgDirectionRef", Description:""},
+    0x0011: {Name: "GPSImgDirection", Description:""},
+    0x0012: {Name: "GPSMapDatum", Description:""},
+    0x0013: {Name: "GPSDestLatitudeRef", Description:""},
+    0x0014: {Name: "GPSDestLatitude", Description:""},
+    0x0015: {Name: "GPSDestLongitudeRef", Description:""},
+    0x0016: {Name: "GPSDestLongitude", Description:""},
+    0x0017: {Name: "GPSDestBearingRef", Description:""},
+    0x0018: {Name: "GPSDestBearing", Description:""},
+    0x0019: {Name: "GPSDestDistanceRef", Description:""},
+    0x001a: {Name: "GPSDestDistance", Description:""},
+    0x001b: {Name: "GPSProcessingMethod", Description:""},
+    0x001c: {Name: "GPSAreaInformation", Description:""},
+    0x001d: {Name: "GPSDateStamp", Description:""},
+    0x001e: {Name: "GPSDifferential", Description:""},
+    0x001f: {Name: "GPSHPositioningError", Description:""},
+  }
+  return IFDTags[idx]
+}
+
 
 // Exif Entry Data Parser
 func EntryDataOf(data []byte, df DataFormat, endianness binary.ByteOrder) interface{} {
@@ -625,3 +665,21 @@ func EntryDataOf(data []byte, df DataFormat, endianness binary.ByteOrder) interf
 		return data
 	}
 }
+
+func parseAndPrintGPS(latRef, lat, lonRef, lon string) string {
+  proceseCoordinate := func(coordStr string) (int, int, float64) {
+   parts := strings.Split(coordStr,".")
+   degreesPart,_ := strconv.Atoi(parts[0])
+   decimalPart,_ := strconv.ParseFloat("0."+parts[1],64)
+   deg := degreesPart / 10
+   min := degreesPart % 10
+   sec := decimalPart * 60
+   return deg, min, sec
+  }
+ latDeg, latMin, latSec := proceseCoordinate(lat)
+ lonDeg, lonMin, lonSec := proceseCoordinate(lon)
+ return fmt.Sprintf("%d deg %d' %.2f\" %s %d deg %d' %.2f\" %s",
+   latDeg, latMin, latSec, latRef, lonDeg, lonMin, lonSec, lonRef)
+}
+
+

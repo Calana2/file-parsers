@@ -38,6 +38,7 @@ var IFDType = []string{
 	"Main image",
 	"Thumbnail image",
 	"IFD Formatted Data -- SubIFD",
+  "GPS IFD",
 }
 
 type DataFormat struct {
@@ -97,56 +98,10 @@ var YCbCrPositioning = []string{
 }
 
 // 0x0103 - IFD1
-var Compression = []string{
+var Compression = map[uint16]string{
 	1:     "Uncompressed",
-	2:     "CCITT 1D",
-	3:     "T4/Group 3 Fax",
-	4:     "T6/Group 4 Fax",
-	5:     "LZW",
 	6:     "JPEG (old-style)",
 	7:     "JPEG",
-	8:     "Adobe Deflate",
-	9:     "JBIG B&W",
-	10:    "JBIG Color",
-	99:    "JPEG",
-	262:   "Kodak 262",
-	32766: "Next",
-	32767: "Sony ARW Compressed",
-	32769: "Packed RAW",
-	32770: "Samsung SRW Compressed",
-	32771: "CCIRLEW",
-	32772: "Samsung SRW Compressed",
-	32773: "PackBits",
-	32809: "Thunderscan",
-	32867: "Kodak KDC Compressed",
-	32895: "IT8CTPAD",
-	32896: "IT8LW",
-	32897: "IT8MP",
-	32898: "IT8BL",
-	32908: "PixarFilm",
-	32946: "Deflate",
-	32947: "DCS",
-	33003: "Aperio JPEG 2000 YCbCr",
-	33005: "Aperio JPEG 2000 RGB",
-	34661: "JBIG",
-	34676: "SGILog",
-	34677: "SGILog24",
-	34712: "JPEG 2000",
-	34713: "Nikon NEF Compressed",
-	34715: "JBIG2 TIFF FX",
-	34718: "MDI Binary Level Codec",
-	34719: "MDI Progressive Transform Codec",
-	34720: "MDI Vector",
-	34887: "ESRI Lerc",
-	34892: "Lossy JPEG",
-	34925: "LZMA2",
-	34926: "Zstd",
-	34927: "WebP",
-	34933: "PNG",
-	34934: "JPEG XR",
-	52546: "JPEG XL",
-	65000: "Kodak DCR Compressed",
-	65535: "Pentax PEF Compressed",
 }
 
 // 0x0106 - subIFD
@@ -177,41 +132,41 @@ var ExposureProgram = []string{
 }
 
 // 0x9207 - subIFD
-var MeteringMode = []string{
-	"Unknown",
-	"Average",
-	"Center Weighted Average",
-	"Spot",
-	"Multi-Spot",
-	"Multi-Segment",
-	"Partial",
+var MeteringMode = map[uint16]string{
+  0:"Unknown",
+  1:"Average",
+  2:"Center Weighted Average",
+  3:"Spot",
+  4:"Multi-Spot",
+  5:"Multi-Segment",
+  6:"Partial",
 	255: "Other",
 }
 
 // 0x9208 - subIFD
-var LightSource = []string{
-	"Unknown",
-	"Daylight",
-	"Fluorescent",
-	"Tungsten (incandescent",
-	"Flash",
+var LightSource = map[uint16]string{
+  0:"Unknown",
+  1:"Daylight",
+  2:"Fluorescent",
+  3:"Tungsten (incandescent",
+  4:"Flash",
 	9: "Fine Weather",
-	"Cloudy",
-	"Shade",
-	"Daylight",
-	"Daylight Fluorescent",
-	"Day white Fluorescent",
-	"Cool white Fluorescent",
-	"White Fluorescent",
-	"Warm White Fluorescent",
-	"Standart Light A",
-	"Standart Light B",
-	"Standart Light C",
-	"D55",
-	"D65",
-	"D75",
-	"D50",
-	"ISO Studio Tungsten",
+  10:"Cloudy",
+  11:"Shade",
+  12:"Daylight",
+  13:"Daylight Fluorescent",
+  14:"Day white Fluorescent",
+  15:"Cool white Fluorescent",
+  16:"White Fluorescent",
+  17:"Warm White Fluorescent",
+  18:"Standart Light A",
+  19:"Standart Light B",
+  20:"Standart Light C",
+  21:"D55",
+  22:"D65",
+  23:"D75",
+  24:"D50",
+  25:"ISO Studio Tungsten",
 	255: "Other",
 }
 
@@ -258,7 +213,7 @@ var Flash = []string{
 }
 
 // 0xa001 - subIFD
-var ColorSpace = []string{
+var ColorSpace = map[uint16]string{
 	1:      "sRGB",
 	2:      "Adobe RGB",
 	0xfffd: "Wide Gamut RGB",
@@ -287,11 +242,10 @@ var SensingMethod = []string{
 }
 
 // 0xa300 - subIFD
-var FileSource = []string{
+var FileSource = map[uint16]string{
 	1: "Film Scanner",
 	2: "Reflection Print Scanner",
 	3: "Digital Camera",
-  50331648: "Sigma Digital Camera",
 }
 
 // 0xa301 - subIFD
@@ -370,3 +324,11 @@ var SubjectDistanceRange = [4]string{
 	2: "Close",
 	3: "Distant",
 }
+
+type GPSData struct {
+ LongitudeValue string
+ LongitudeRef string
+ LatitudeValue string
+ LatitudeRef string
+}
+
